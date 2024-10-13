@@ -1,0 +1,45 @@
+import socket
+import struct
+import os
+
+def create_raw_socket():
+    
+    sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP
+    
+    sock.bind(("0.0.0.0", 0))
+    
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+    
+    if os.name == 'posix':
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    return sock
+
+def process_packet(packet):
+    
+    ip_header = packet[:20]
+    ip_fields = struct.unpack('!BBHHHBBH4s4s', ip_header)
+
+    version_ihl = ip_fields[0]
+    version = version_ihl >> 4
+    ihl = version_ihl & 0xF
+
+    src_ip = socket.inet_ntoa(ip_fields[8])
+    dst_ip = socket.inet_ntoa(ip_fields[9])
+
+    print(f"Version: {version}, IHL: {ihl}, Source: {src_ip}, Destination: {dst_ip}")
+
+def start_sniffer():
+    sock = create_raw_socket()
+    print("Starting the packet sniffer...")
+
+    try:
+        while True:
+            
+            packet = sock.recvfrom(65565)[0]
+            process_packet(packet)
+    except KeyboardInterrupt:
+        print("Sniffer stopped.")
+
+if __name__ == "__main__":
+    start_sniffer()
